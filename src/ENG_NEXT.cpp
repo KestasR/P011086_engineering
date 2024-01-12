@@ -6,6 +6,7 @@
 #include "Adafruit_Sensor.h"
 #include "Lcd_service.h"
 #include "Timer.h"
+#include <thermistor.h>
 
 #define	_CAN_CS		10	
 #define	_CAN_INT	A0
@@ -19,13 +20,21 @@
 #define pin_tmp_4 7
 #define typ_tmp_4 DHT22
 
+#define NTC_PIN A1
+THERMISTOR thermistor(NTC_PIN, // Analog pin
+                      47000,   // Nominal resistance at 25 ºC
+                      4450,    // thermistor's beta coefficient
+                      47000);  // Value of the series resistor
+uint16_t ntc_temp;
+
 MyNextion nextionas;
-SoftwareSerial softSerial(3, 2);
+SoftwareSerial softSerial(2, 3);
 Timer temp_timer;
 Timer can_tx_timer;
 Timer can_rx_timer;
 Timer myTimer1;
 Timer myTimer2;
+Timer timer_ntc;
 
 DHT temp_sensor_1(pin_tmp_1, typ_tmp_1);
 DHT temp_sensor_2(pin_tmp_2, typ_tmp_2);
@@ -61,11 +70,13 @@ void setup()
   myTimer1.setDuration(200);
   myTimer2.setDuration(200);
   temp_timer.setDuration(5000);
+  timer_ntc.setDuration(3000);
   can_tx_timer.setDuration(300);
   can_rx_timer.setDuration(200);
 
   temp_sensor_1.begin();
   temp_sensor_2.begin();
+  
 }
 
 void loop()
@@ -79,11 +90,11 @@ void loop()
     temp[2] = temp_sensor_3.readTemperature();
     temp[3] = temp_sensor_4.readTemperature();
 
-    nextionas.toNextion("t_rck", temp[0]*10);
-    nextionas.toNextion("t_eng", temp[1]*10);
-    nextionas.toNextion("t_trf", temp[2]*10);
-    nextionas.toNextion("t_out", temp[3]*10);
-    nextionas.toNextion("t_std", temp[0]*10);
+    nextionas.toNextion("t_rck", temp[0]*10+50);    
+    nextionas.toNextion("t_eng", temp[1]*10+50);
+    nextionas.toNextion("t_trf", ntc_temp);
+    nextionas.toNextion("t_out", temp[3]*10+50);
+    nextionas.toNextion("t_std", temp[0]*10+50);
 
   }
 
@@ -100,7 +111,7 @@ void loop()
 
   if ((mcp2515.readMessage(&canRx533)==MCP2515::ERROR_OK)&& can_rx_timer.hasElapsed())
   {
-    if(canRx533.can_id==533)
+    if(canRx533.can_id==601)
     {
       can_rx_timer.restart();
       CAN_rx_data[0]=canRx533.data[0];
@@ -111,4 +122,12 @@ void loop()
       CAN_rx_data[5]=canRx533.data[5];      
     }
   }
+
+  if (timer_ntc.hasElapsed())
+  {
+    timer_ntc.restart();
+    ntc_temp = thermistor.read();
+    Serial.println(ntc_temp); 
+  }
+
 }
