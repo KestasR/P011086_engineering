@@ -76,6 +76,8 @@ void setup()
 
   temp_sensor_1.begin();
   temp_sensor_2.begin();
+  temp_sensor_3.begin();
+  temp_sensor_4.begin();
   
 }
 
@@ -85,26 +87,26 @@ void loop()
   if (temp_timer.hasElapsed())
   {
     temp_timer.restart();
-    temp[0] = temp_sensor_1.readTemperature();
-    temp[1] = temp_sensor_2.readTemperature();
-    temp[2] = temp_sensor_3.readTemperature();
-    temp[3] = temp_sensor_4.readTemperature();
+    temp[0] = (temp_sensor_1.readTemperature()+100)*10;
+    temp[1] = (temp_sensor_2.readTemperature()+100)*10;
+    temp[2] = (temp_sensor_3.readTemperature()+100)*10;
+    temp[3] = (temp_sensor_4.readTemperature()+100)*10;
 
-    nextionas.toNextion("t_rck", temp[0]*10+50);    
-    nextionas.toNextion("t_eng", temp[1]*10+50);
-    nextionas.toNextion("t_trf", ntc_temp);
-    nextionas.toNextion("t_out", temp[3]*10+50);
-    nextionas.toNextion("t_std", temp[0]*10+50);
+    nextionas.toNextion("gl.t_rck", temp[0]);    
+    nextionas.toNextion("gl.t_eng", temp[1]);
+    nextionas.toNextion("gl.t_trf", ntc_temp);
+    nextionas.toNextion("gl.t_out", temp[3]);
+    nextionas.toNextion("gl.t_std", temp[4]);
 
   }
 
   if (can_tx_timer.hasElapsed())
   {
-    canTx99.data[0]=temp[0]*10;
-    canTx99.data[1]=temp[1]*10;
-    canTx99.data[2]=temp[2]*10;
-    canTx99.data[3]=temp[3]*10;
-    canTx99.data[4]=temp[0]*10;
+    canTx99.data[0]=temp[0];
+    canTx99.data[1]=temp[1];
+    canTx99.data[2]=temp[2];
+    canTx99.data[3]=temp[3];
+    canTx99.data[4]=ntc_temp;
     mcp2515.sendMessage(&canTx99);
     can_tx_timer.restart();
   }
