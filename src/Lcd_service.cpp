@@ -1,11 +1,13 @@
 #include "Lcd_service.h"
 
 // Constructor
-MyNextion::MyNextion() {
-  softwareSerial = nullptr;//nulinis pointeris (pasirinkimas į kurį seriala nori rašyt)
+MyNextion::MyNextion()
+{
+  softwareSerial = nullptr; // nulinis pointeris (pasirinkimas į kurį seriala nori rašyt)
 }
 
-void MyNextion::setSerial(SoftwareSerial* serial) {
+void MyNextion::setSerial(SoftwareSerial *serial)
+{
   softwareSerial = serial;
 }
 
@@ -34,17 +36,43 @@ void MyNextion::toNextion(String var_name, int value)
   sendString(comand);
 }
 
-void MyNextion::fromNextion()
+void MyNextion::fromNextion(String dfd)
 {
   tmr_1 = millis();
-
-  if (softwareSerial->available() > 2)
+  if (softwareSerial->available())
   {
-    char start_char = softwareSerial->read();
+    dfd += char(softwareSerial->read());
+
+    if (dfd.length() > 3 && dfd.substring(0, 3) != "TVC")
+    {
+      dfd = "";
+      Serial.println("error");
+    }
+    else
+    {
+      if (dfd.substring((dfd.length() - 1), dfd.length()) == "?")
+      {
+        Serial.println(dfd.length());
+        String command = dfd.substring(3, 6);
+        Serial.println(command);
+        String value = dfd.substring(6, dfd.length() - 1);
+        Serial.println(command + " : " + value);
+        Serial.println(value);
+        if (command == "PAG")
+        {
+          Serial.println("puslapis");
+        }
+        dfd = "";
+      }
+    }
+  }
+}
+
+/*
+    //char start_char = softwareSerial->read();
     if (start_char == '#')
     {
       uint8_t lenght = softwareSerial->read();
-      //unsigned long tmr_1 = millis();
       boolean cmd_found = true;
 
       while (softwareSerial->available() < lenght)
@@ -62,8 +90,13 @@ void MyNextion::fromNextion()
         switch (cmd)
         {
           case 'P':
-          Serial.println ("turim puslapį");
+          Serial.print ("page: ");
           break;
+
+          case 'M':
+          Serial.print ("Mygtukas");
+          break;
+
         }
       }
     }
@@ -79,6 +112,6 @@ void MyNextion::fromNextion()
     {
       Serial.println ("mane liecia");
     }
-    
+
   }
-}
+*/

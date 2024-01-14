@@ -11,7 +11,7 @@ public:
     MyNextion();
     void toNextion(String var_name, int value);
     void setSerial(SoftwareSerial* serial);
-    void fromNextion ();
+    void fromNextion (String dfd);
 private:
     void sendString(String str);
     SoftwareSerial* softwareSerial;

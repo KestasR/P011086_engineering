@@ -7,9 +7,10 @@
 #include "Lcd_service.h"
 #include "Timer.h"
 #include <thermistor.h>
+#include "next_receive.h"
 
-#define	_CAN_CS		10	
-#define	_CAN_INT	A0
+#define _CAN_CS 10
+#define _CAN_INT A0
 
 #define pin_tmp_1 4
 #define typ_tmp_1 DHT22
@@ -35,6 +36,7 @@ Timer can_rx_timer;
 Timer myTimer1;
 Timer myTimer2;
 Timer timer_ntc;
+Timer timer_from_nextion;
 
 DHT temp_sensor_1(pin_tmp_1, typ_tmp_1);
 DHT temp_sensor_2(pin_tmp_2, typ_tmp_2);
@@ -48,7 +50,8 @@ uint8_t CAN_rx_data[8];
 
 float temp[4];
 float hum[4];
-
+String from_disp;
+String dfd;
 
 void setup()
 {
@@ -57,8 +60,8 @@ void setup()
   softSerial.begin(9600);
   nextionas.setSerial(&softSerial);
 
-  canTx99.can_id = 99; //Can ID
-  canTx99.can_dlc = 8; //Can message lenght
+  canTx99.can_id = 99; // Can ID
+  canTx99.can_dlc = 8; // Can message lenght
 
   mcp2515.reset();
   mcp2515.setBitrate(CAN_250KBPS, MCP_8MHZ);
@@ -66,70 +69,99 @@ void setup()
 
   pinMode(pin_tmp_1, INPUT);
   pinMode(pin_tmp_2, INPUT);
-  
+  pinMode(pin_tmp_3, INPUT);
+  pinMode(pin_tmp_4, INPUT);
+
   myTimer1.setDuration(200);
   myTimer2.setDuration(200);
   temp_timer.setDuration(5000);
-  timer_ntc.setDuration(3000);
+  timer_ntc.setDuration(5000);
   can_tx_timer.setDuration(300);
   can_rx_timer.setDuration(200);
+  timer_from_nextion.setDuration(200);
 
   temp_sensor_1.begin();
   temp_sensor_2.begin();
   temp_sensor_3.begin();
   temp_sensor_4.begin();
-  
 }
 
 void loop()
 {
 
+  // nextionas.fromNextion(dfd);
+  // Serial.println(dfd);
+  if (timer_from_nextion.hasElapsed())
+  {
+    timer_from_nextion.restart();
+  }
+
+  if (softSerial.available())
+  {
+    dfd += char(softSerial.read());
+
+    if (dfd.length() > 3 && dfd.substring(0, 3) != "TVC")
+    {
+      dfd = "";
+      Serial.println("error");
+    }
+    else
+    {
+      if(dfd.substring((dfd.length()-1),dfd.length()) =="?")
+      {
+        
+        String command = dfd.substring(3,6);
+        String value = dfd.substring(6,dfd.length()-1);
+        Serial.println(command + " : " + value);
+        dfd="";
+        
+      }
+    }
+  }
+
   if (temp_timer.hasElapsed())
   {
     temp_timer.restart();
-    temp[0] = (temp_sensor_1.readTemperature()+100)*10;
-    temp[1] = (temp_sensor_2.readTemperature()+100)*10;
-    temp[2] = (temp_sensor_3.readTemperature()+100)*10;
-    temp[3] = (temp_sensor_4.readTemperature()+100)*10;
+    temp[0] = (temp_sensor_1.readTemperature() + 100) * 10;
+    temp[1] = (temp_sensor_2.readTemperature() + 100) * 10;
+    temp[2] = (temp_sensor_3.readTemperature() + 100) * 10;
+    temp[3] = (temp_sensor_4.readTemperature() + 100) * 10;
 
-    nextionas.toNextion("gl.t_rck", temp[0]);    
+    nextionas.toNextion("gl.t_rck", temp[0]);
     nextionas.toNextion("gl.t_eng", temp[1]);
-    nextionas.toNextion("gl.t_trf", ntc_temp);
-    nextionas.toNextion("gl.t_out", temp[3]);
-    nextionas.toNextion("gl.t_std", temp[4]);
-
+    nextionas.toNextion("gl.t_trf", (ntc_temp + 100) * 10);
+    nextionas.toNextion("gl.t_out", temp[2]);
+    nextionas.toNextion("gl.t_std", temp[3]);
   }
 
   if (can_tx_timer.hasElapsed())
   {
-    canTx99.data[0]=temp[0];
-    canTx99.data[1]=temp[1];
-    canTx99.data[2]=temp[2];
-    canTx99.data[3]=temp[3];
-    canTx99.data[4]=ntc_temp;
+    canTx99.data[0] = temp[0];
+    canTx99.data[1] = temp[1];
+    canTx99.data[2] = temp[2];
+    canTx99.data[3] = temp[3];
+    canTx99.data[4] = ntc_temp;
     mcp2515.sendMessage(&canTx99);
     can_tx_timer.restart();
   }
 
-  if ((mcp2515.readMessage(&canRx533)==MCP2515::ERROR_OK)&& can_rx_timer.hasElapsed())
+  if ((mcp2515.readMessage(&canRx533) == MCP2515::ERROR_OK) && can_rx_timer.hasElapsed())
   {
-    if(canRx533.can_id==601)
+    if (canRx533.can_id == 601)
     {
       can_rx_timer.restart();
-      CAN_rx_data[0]=canRx533.data[0];
-      CAN_rx_data[1]=canRx533.data[1];
-      CAN_rx_data[2]=canRx533.data[2];
-      CAN_rx_data[3]=canRx533.data[3];
-      CAN_rx_data[4]=canRx533.data[4];
-      CAN_rx_data[5]=canRx533.data[5];      
+      CAN_rx_data[0] = canRx533.data[0];
+      CAN_rx_data[1] = canRx533.data[1];
+      CAN_rx_data[2] = canRx533.data[2];
+      CAN_rx_data[3] = canRx533.data[3];
+      CAN_rx_data[4] = canRx533.data[4];
+      CAN_rx_data[5] = canRx533.data[5];
     }
   }
 
   if (timer_ntc.hasElapsed())
   {
     timer_ntc.restart();
-    ntc_temp = thermistor.read();
-    Serial.println(ntc_temp); 
+    ntc_temp = thermistor.read() / 10;
   }
-
 }
