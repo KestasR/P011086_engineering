@@ -16,12 +16,31 @@
 #define typ_tmp_1 DHT22
 #define pin_tmp_2 5
 #define typ_tmp_2 DHT22
-#define pin_tmp_3 6
+#define pin_tmp_3 7
 #define typ_tmp_3 DHT22
-#define pin_tmp_4 7
+#define pin_tmp_4 6
 #define typ_tmp_4 DHT22
 
 #define NTC_PIN A1
+#define RDC 19
+#define PE 17
+#define POWER_LOSS 18
+#define MUTE_IN 16
+
+#define MUTE_LED_OUT 8
+#define Buzzer_OUT 9
+
+int rdc_value;
+int PE_value;
+int POWER_LOSS_value;
+int MUTE_IN_value;
+int rdc_state;
+int PE_state;
+int POWER_LOSS_state;
+int MUTE_IN_state;
+int prev_MUTE_IN_STATE=0;
+int MUTE_IN_STATE_COUNTER=0;
+
 THERMISTOR thermistor(NTC_PIN, // Analog pin
                       47000,   // Nominal resistance at 25 ºC
                       4450,    // thermistor's beta coefficient
@@ -29,7 +48,7 @@ THERMISTOR thermistor(NTC_PIN, // Analog pin
 uint16_t ntc_temp;
 
 MyNextion nextionas;
-SoftwareSerial softSerial(2, 3);
+SoftwareSerial softSerial(3, 2);
 Timer temp_timer;
 Timer can_tx_timer;
 Timer can_rx_timer;
@@ -37,6 +56,8 @@ Timer myTimer1;
 Timer myTimer2;
 Timer timer_ntc;
 Timer timer_from_nextion;
+Timer timer_IN;
+Timer timer_to_nextion;
 
 DHT temp_sensor_1(pin_tmp_1, typ_tmp_1);
 DHT temp_sensor_2(pin_tmp_2, typ_tmp_2);
@@ -72,6 +93,13 @@ void setup()
   pinMode(pin_tmp_3, INPUT);
   pinMode(pin_tmp_4, INPUT);
 
+  pinMode(RDC, INPUT_PULLUP);
+  pinMode(PE, INPUT_PULLUP);
+  pinMode(POWER_LOSS, INPUT_PULLUP);
+  pinMode(MUTE_IN, INPUT_PULLUP);
+  pinMode(MUTE_LED_OUT, OUTPUT);
+  pinMode(Buzzer_OUT, OUTPUT);
+
   myTimer1.setDuration(200);
   myTimer2.setDuration(200);
   temp_timer.setDuration(5000);
@@ -79,6 +107,8 @@ void setup()
   can_tx_timer.setDuration(300);
   can_rx_timer.setDuration(200);
   timer_from_nextion.setDuration(200);
+  timer_IN.setDuration(1000);
+  timer_to_nextion.setDuration(200);
 
   temp_sensor_1.begin();
   temp_sensor_2.begin();
@@ -107,14 +137,13 @@ void loop()
     }
     else
     {
-      if(dfd.substring((dfd.length()-1),dfd.length()) =="?")
+      if (dfd.substring((dfd.length() - 1), dfd.length()) == "?")
       {
-        
-        String command = dfd.substring(3,6);
-        String value = dfd.substring(6,dfd.length()-1);
+
+        String command = dfd.substring(3, 6);
+        String value = dfd.substring(6, dfd.length() - 1);
         Serial.println(command + " : " + value);
-        dfd="";
-        
+        dfd = "";
       }
     }
   }
@@ -147,7 +176,7 @@ void loop()
 
   if ((mcp2515.readMessage(&canRx533) == MCP2515::ERROR_OK) && can_rx_timer.hasElapsed())
   {
-    if (canRx533.can_id == 601)
+    if (canRx533.can_id == 533)
     {
       can_rx_timer.restart();
       CAN_rx_data[0] = canRx533.data[0];
@@ -163,5 +192,61 @@ void loop()
   {
     timer_ntc.restart();
     ntc_temp = thermistor.read() / 10;
+  }
+
+  if (timer_IN.hasElapsed())
+  {
+    timer_IN.restart();
+  }
+
+  if (timer_to_nextion.hasElapsed())
+  {
+    timer_to_nextion.restart();
+    rdc_value = analogRead(RDC);
+    if (rdc_value<500)
+    {
+      rdc_state=1;
+    }
+    else
+    {
+      rdc_state=0;
+    }
+    PE_value = analogRead(PE);
+    if (PE_value<500)
+    {
+      PE_state=1;
+    }
+    else
+    {
+      PE_state=0;
+    }
+    POWER_LOSS_value = analogRead(POWER_LOSS);
+    if (POWER_LOSS_value<500)
+    {
+      POWER_LOSS_state=1;
+    }
+    else
+    {
+      POWER_LOSS_state=0;
+    }
+    MUTE_IN_value = analogRead(MUTE_IN);
+    if (MUTE_IN_value<500)
+    {
+      MUTE_IN_state=1;
+    }
+    else
+    {
+      MUTE_IN_state=0;
+    }
+    if (MUTE_IN_state!=prev_MUTE_IN_STATE)
+    {
+      MUTE_IN_STATE_COUNTER++;
+    }
+    if(MUTE_IN_STATE_COUNTER>=2) MUTE_IN_STATE_COUNTER=0;
+    
+    nextionas.toNextion("gl.RDC", rdc_state);
+    nextionas.toNextion("gl.PE", PE_state);
+    nextionas.toNextion("gl.POWER", POWER_LOSS_state);
+    nextionas.toNextion("gl.MUTE", MUTE_IN_STATE_COUNTER);
   }
 }
