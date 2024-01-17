@@ -42,6 +42,12 @@ int prev_MUTE_IN_STATE=0;
 int MUTE_IN_STATE_COUNTER=0;
 
 bool alarm;
+int alarm_rdc;
+int alarm_pe;
+int alarm_power;
+int alarm_sum=0;
+int alarm_prev_sum=0;
+
 
 THERMISTOR thermistor(NTC_PIN, // Analog pin
                       47000,   // Nominal resistance at 25 ºC
@@ -122,6 +128,7 @@ void setup()
 
 void loop()
 {
+  /*
   if (softSerial.available())
   {
     dfd += char(softSerial.read());
@@ -143,6 +150,7 @@ void loop()
       }
     }
   }
+  */
 
   if (temp_timer.hasElapsed())
   {
@@ -236,7 +244,34 @@ void loop()
       MUTE_IN_state=0;
     }
 //Alarmo radimas    
-    if (rdc_state==1||PE_state==1||POWER_LOSS_state==1)
+    if (rdc_state==1)
+    {
+      alarm_rdc=1;
+    }
+    else
+    {
+      alarm_rdc=0;
+    }
+    if (PE_state==1)
+    {
+      alarm_pe=1;
+    }
+    else
+    {
+      alarm_pe=0;
+    }
+    if (POWER_LOSS_state==1)
+    {
+      alarm_power=1;
+    }
+    else
+    {
+      alarm_power=0;
+    }
+
+  alarm_sum=alarm_rdc+alarm_pe+alarm_power;
+
+    if (alarm_rdc==1||alarm_pe==1||alarm_power==1) 
     {
       alarm=true;
     }
@@ -254,33 +289,53 @@ void loop()
         MUTE_IN_STATE_COUNTER++;        
       }    
     }
+
     if(MUTE_IN_STATE_COUNTER>=2) MUTE_IN_STATE_COUNTER=0;
     prev_MUTE_IN_STATE = MUTE_IN_state;
 
-
 //Buzerio ijungimas
+
     if(alarm!=true)
     {
       digitalWrite(Buzzer_OUT, LOW);
       MUTE_IN_STATE_COUNTER=0;
-      digitalWrite(MUTE_LED_OUT, LOW);
     }
     else if(alarm==true&&MUTE_IN_STATE_COUNTER==1)
     {
       digitalWrite(Buzzer_OUT, LOW);
-      digitalWrite(MUTE_LED_OUT, HIGH);
     }
     else
     {
       digitalWrite(Buzzer_OUT, HIGH);
+  
     }
 
+  //alarmo ijungimas pasikeitus alarmams
+
+  if(alarm_sum!=alarm_prev_sum&&alarm==true)
+  {
+    MUTE_IN_STATE_COUNTER=0;    
+  }
+  alarm_prev_sum=alarm_sum;
+  
+  if (MUTE_IN_STATE_COUNTER!=1)
+  {
+    digitalWrite(MUTE_LED_OUT, LOW);
+  }
+  else{
+    digitalWrite(MUTE_LED_OUT, HIGH);
+  }
 
     nextionas.toNextion("gl.RDC", rdc_state);
     nextionas.toNextion("gl.PE", PE_state);
     nextionas.toNextion("gl.POWER", POWER_LOSS_state);
     nextionas.toNextion("gl.MUTE", MUTE_IN_STATE_COUNTER);
+
+    Serial.print("MUTE: ");
     Serial.println(MUTE_IN_STATE_COUNTER);
+    Serial.print("alarm: ");
     Serial.println(alarm);
+    Serial.print("alarm count: ");
+    Serial.println(alarm_sum);
   }
 }
