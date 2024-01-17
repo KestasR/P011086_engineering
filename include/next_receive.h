@@ -24,5 +24,4 @@ void receive_next()
       }
     }
   }
-}
-*/
+  */

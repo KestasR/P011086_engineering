@@ -41,6 +41,8 @@ int MUTE_IN_state;
 int prev_MUTE_IN_STATE=0;
 int MUTE_IN_STATE_COUNTER=0;
 
+bool alarm;
+
 THERMISTOR thermistor(NTC_PIN, // Analog pin
                       47000,   // Nominal resistance at 25 ºC
                       4450,    // thermistor's beta coefficient
@@ -120,11 +122,6 @@ void setup()
 
 void loop()
 {
-  if (timer_from_nextion.hasElapsed())
-  {
-    timer_from_nextion.restart();
-  }
-
   if (softSerial.available())
   {
     dfd += char(softSerial.read());
@@ -136,9 +133,9 @@ void loop()
     }
     else
     {
+      Serial.println("Gavom komanda");
       if (dfd.substring((dfd.length() - 1), dfd.length()) == "?")
       {
-
         String command = dfd.substring(3, 6);
         String value = dfd.substring(6, dfd.length() - 1);
         Serial.println(command + " : " + value);
@@ -238,23 +235,52 @@ void loop()
     {
       MUTE_IN_state=0;
     }
+//Alarmo radimas    
+    if (rdc_state==1||PE_state==1||POWER_LOSS_state==1)
+    {
+      alarm=true;
+    }
+    else
+    {
+      alarm=false;
+    }
+
 //MUTE mygtuko uzfiksavimas ir jo pozicijos siuntimas
     if (MUTE_IN_state!=prev_MUTE_IN_STATE&&timer_debounce.hasElapsed())
     {
       timer_debounce.restart();
       if(MUTE_IN_state == HIGH)
       {
-        MUTE_IN_STATE_COUNTER++;
-      }
-    
+        MUTE_IN_STATE_COUNTER++;        
+      }    
     }
     if(MUTE_IN_STATE_COUNTER>=2) MUTE_IN_STATE_COUNTER=0;
     prev_MUTE_IN_STATE = MUTE_IN_state;
+
+
+//Buzerio ijungimas
+    if(alarm!=true)
+    {
+      digitalWrite(Buzzer_OUT, LOW);
+      MUTE_IN_STATE_COUNTER=0;
+      digitalWrite(MUTE_LED_OUT, LOW);
+    }
+    else if(alarm==true&&MUTE_IN_STATE_COUNTER==1)
+    {
+      digitalWrite(Buzzer_OUT, LOW);
+      digitalWrite(MUTE_LED_OUT, HIGH);
+    }
+    else
+    {
+      digitalWrite(Buzzer_OUT, HIGH);
+    }
+
 
     nextionas.toNextion("gl.RDC", rdc_state);
     nextionas.toNextion("gl.PE", PE_state);
     nextionas.toNextion("gl.POWER", POWER_LOSS_state);
     nextionas.toNextion("gl.MUTE", MUTE_IN_STATE_COUNTER);
     Serial.println(MUTE_IN_STATE_COUNTER);
+    Serial.println(alarm);
   }
 }
