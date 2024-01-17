@@ -60,8 +60,6 @@ SoftwareSerial softSerial(3, 2);
 Timer temp_timer;
 Timer can_tx_timer;
 Timer can_rx_timer;
-Timer myTimer1;
-Timer myTimer2;
 Timer timer_ntc;
 Timer timer_from_nextion;
 Timer timer_IN;
@@ -101,7 +99,6 @@ void setup()
   pinMode(pin_tmp_2, INPUT);
   pinMode(pin_tmp_3, INPUT);
   pinMode(pin_tmp_4, INPUT);
-
   pinMode(RDC, INPUT_PULLUP);
   pinMode(PE, INPUT_PULLUP);
   pinMode(POWER_LOSS, INPUT_PULLUP);
@@ -109,8 +106,6 @@ void setup()
   pinMode(MUTE_LED_OUT, OUTPUT);
   pinMode(Buzzer_OUT, OUTPUT);
 
-  myTimer1.setDuration(200);
-  myTimer2.setDuration(200);
   temp_timer.setDuration(5000);
   timer_ntc.setDuration(5000);
   can_tx_timer.setDuration(300);
@@ -174,6 +169,7 @@ void loop()
     canTx99.data[2] = temp[2];
     canTx99.data[3] = temp[3];
     canTx99.data[4] = ntc_temp;
+    canTx99.data[5] = POWER_LOSS_state;
     mcp2515.sendMessage(&canTx99);
     can_tx_timer.restart();
   }
