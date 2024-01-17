@@ -120,8 +120,6 @@ void setup()
 
 void loop()
 {
-  // nextionas.fromNextion(dfd);
-
   if (timer_from_nextion.hasElapsed())
   {
     timer_from_nextion.restart();
