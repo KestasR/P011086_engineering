@@ -58,6 +58,7 @@ Timer timer_ntc;
 Timer timer_from_nextion;
 Timer timer_IN;
 Timer timer_to_nextion;
+Timer timer_debounce;
 
 DHT temp_sensor_1(pin_tmp_1, typ_tmp_1);
 DHT temp_sensor_2(pin_tmp_2, typ_tmp_2);
@@ -109,6 +110,7 @@ void setup()
   timer_from_nextion.setDuration(200);
   timer_IN.setDuration(1000);
   timer_to_nextion.setDuration(200);
+  timer_debounce.setDuration(100);
 
   temp_sensor_1.begin();
   temp_sensor_2.begin();
@@ -118,9 +120,8 @@ void setup()
 
 void loop()
 {
-
   // nextionas.fromNextion(dfd);
-  // Serial.println(dfd);
+
   if (timer_from_nextion.hasElapsed())
   {
     timer_from_nextion.restart();
@@ -229,6 +230,7 @@ void loop()
     {
       POWER_LOSS_state=0;
     }
+    
     MUTE_IN_value = analogRead(MUTE_IN);
     if (MUTE_IN_value<500)
     {
@@ -238,15 +240,23 @@ void loop()
     {
       MUTE_IN_state=0;
     }
-    if (MUTE_IN_state!=prev_MUTE_IN_STATE)
+//MUTE mygtuko uzfiksavimas ir jo pozicijos siuntimas
+    if (MUTE_IN_state!=prev_MUTE_IN_STATE&&timer_debounce.hasElapsed())
     {
-      MUTE_IN_STATE_COUNTER++;
+      timer_debounce.restart();
+      if(MUTE_IN_state == HIGH)
+      {
+        MUTE_IN_STATE_COUNTER++;
+      }
+    
     }
     if(MUTE_IN_STATE_COUNTER>=2) MUTE_IN_STATE_COUNTER=0;
-    
+    prev_MUTE_IN_STATE = MUTE_IN_state;
+
     nextionas.toNextion("gl.RDC", rdc_state);
     nextionas.toNextion("gl.PE", PE_state);
     nextionas.toNextion("gl.POWER", POWER_LOSS_state);
     nextionas.toNextion("gl.MUTE", MUTE_IN_STATE_COUNTER);
+    Serial.println(MUTE_IN_STATE_COUNTER);
   }
 }
