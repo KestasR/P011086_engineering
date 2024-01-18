@@ -160,6 +160,7 @@ void loop()
     nextionas.toNextion("gl.t_trf", (ntc_temp + 100) * 10);
     nextionas.toNextion("gl.t_out", temp[2]);
     nextionas.toNextion("gl.t_std", temp[3]);
+    Serial.println(temp_sensor_3.readTemperature());
   }
 
   if (can_tx_timer.hasElapsed())
@@ -170,7 +171,6 @@ void loop()
     canTx99.data[3] = temp_sensor_3.readTemperature() + 100;
     canTx99.data[4] = temp_sensor_4.readTemperature() + 100;
     canTx99.data[5] = POWER_LOSS_state;
-    Serial.println((ntc_temp+100)*10);
     mcp2515.sendMessage(&canTx99);
     can_tx_timer.restart();
   }
