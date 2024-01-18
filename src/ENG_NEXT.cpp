@@ -164,12 +164,13 @@ void loop()
 
   if (can_tx_timer.hasElapsed())
   {
-    canTx99.data[0] = temp[0];
-    canTx99.data[1] = temp[1];
-    canTx99.data[2] = temp[2];
-    canTx99.data[3] = temp[3];
-    canTx99.data[4] = ntc_temp;
+    canTx99.data[0] = temp_sensor_1.readTemperature() + 100;
+    canTx99.data[1] = temp_sensor_2.readTemperature() + 100;
+    canTx99.data[2] = ntc_temp + 100;
+    canTx99.data[3] = temp_sensor_3.readTemperature() + 100;
+    canTx99.data[4] = temp_sensor_4.readTemperature() + 100;
     canTx99.data[5] = POWER_LOSS_state;
+    Serial.println((ntc_temp+100)*10);
     mcp2515.sendMessage(&canTx99);
     can_tx_timer.restart();
   }
@@ -327,11 +328,5 @@ void loop()
     nextionas.toNextion("gl.POWER", POWER_LOSS_state);
     nextionas.toNextion("gl.MUTE", MUTE_IN_STATE_COUNTER);
 
-    Serial.print("MUTE: ");
-    Serial.println(MUTE_IN_STATE_COUNTER);
-    Serial.print("alarm: ");
-    Serial.println(alarm);
-    Serial.print("alarm count: ");
-    Serial.println(alarm_sum);
   }
 }
